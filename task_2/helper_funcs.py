@@ -6,7 +6,7 @@ from ekphrasis.dicts.emoticons import emoticons
 def get_text_processor(word_stats='twitter'):
     return TextPreProcessor(
             # terms that will be normalized
-            normalize=['url', 'email', 'percent', 'phone', 'user', 'time', 'date'],
+            normalize=['url', 'email', 'phone', 'user'],
             # terms that will be annotated
             annotate={"hashtag", "allcaps", "elongated", "repeated",
                       'emphasis', 'censored'},
