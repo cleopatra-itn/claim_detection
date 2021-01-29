@@ -4,8 +4,6 @@ Paper: Check_square at CheckThat! 2020: Claim Detection in Social Media via Fusi
 
 Code for Task 1 and Task 2 in [CLEF CheckThat! 2020](https://sites.google.com/view/clef2020-checkthat/).
 
-TODO: Filter code for both tasks.
-
 If you find this useful, please cite:
 
 ```
