@@ -69,12 +69,12 @@ def get_best_svm_model(feature_vector_train, label, feature_vector_valid, fname,
                     acc = model.score(feature_vector_valid, val_y)
 
                     predicted_distance = model.decision_function(feature_vector_valid)
-                    results_fpath = my_loc+'/results/bert_word_pos_%s_%s_svm_norm%d.tsv'%(fname, emb_type, args.normalize)
+                    results_fpath = my_loc+'/results/bert_word_posdep_%s_%s_svm_norm%d.tsv'%(fname, emb_type, args.normalize)
                     with open(results_fpath, "w") as results_file:
                         for i, line in valDF.iterrows():
                             dist = predicted_distance[i][0]
                             results_file.write("{}\t{}\t{}\t{}\n".format('covid-19', line['tweet_id'],
-                                                                         dist, "bert_wd_pos"))
+                                                                         dist, "bert_wd_posdep"))
 
                     _, _, avg_precision, _, _ = evaluate('data/dev.tsv',results_fpath)
 
@@ -120,6 +120,47 @@ def get_pos_feat(tweet_list, pos_type):
 
 
 
+def get_dep_relations(train_data, w2v_type):
+    pos_tags = ['ADJ', 'ADV', 'NOUN', 'PROPN', 'VERB', 'NUM']
+    dep_dict = set()
+    for id in train_data:
+        words = train_data[id][w2v_type]
+        sent = " ".join(words)
+
+        doc = nlp(sent)
+
+        for token in doc:
+            if token.pos_ in pos_tags and token.head.pos_ in pos_tags:
+                # rel = token.pos_+'-'+token.dep_+'-'+token.head.pos_
+                rel = token.pos_+'-'+token.dep_
+                dep_dict.add(rel)
+
+    return dep_dict
+
+
+def get_dep_feats(tweet_list, w2v_type):
+    feats = []
+    for id in tweet_list:
+        temp = np.zeros(len(dep_map))
+        words = tweet_list[id][w2v_type]
+        sent = " ".join(words)
+
+        doc = nlp(sent)
+
+        for token in doc:
+            # rel = token.pos_+'-'+token.dep_+'-'+token.head.pos_
+            rel = token.pos_+'-'+token.dep_
+            if rel in dep_map:
+                temp[dep_map[rel]] += 1
+
+
+        if sum(temp) > 0:
+            temp = temp/sum(temp)
+
+        feats.append(temp)
+
+    return np.array(feats)
+
 nlp = spacy.load('en_core_web_lg')
 
 train_dict = json.load(open(my_loc+'/proc_data/train_data.json', 'r', encoding='utf-8'))
@@ -132,11 +173,17 @@ val_y, valDF = get_tweet_data(val_dict)
 ## Syntactic Features
 pos_tags = {'NOUN':0, 'VERB':1, 'PROPN':2, 'ADJ':3, 'ADV':4, 'NUM':5}
 
-pos_type = 'pos_wiki_nostop'
-w2v_type = 'wiki_clean_nostop' 
+pos_type = 'pos_twit_nostop'
+w2v_type = 'twit_clean_nostop' 
 
 train_pos = get_pos_feat(train_dict, pos_type)
 val_pos = get_pos_feat(val_dict, pos_type)
+
+dep_rels = get_dep_relations(train_dict, w2v_type)
+dep_map = {val:key for key,val in enumerate(list(dep_rels))}
+
+train_dep = get_dep_feats(train_dict, w2v_type)
+val_dep = get_dep_feats(val_dict, w2v_type)
 
 
 ## Bert Embeddings
@@ -173,8 +220,8 @@ for emb_type in emb_list:
         ft_train = ft_train/tr_norm[:, np.newaxis]
         ft_val = ft_val/val_norm[:, np.newaxis]
 
-    ft_train = np.concatenate((ft_train, train_pos), axis=1)
-    ft_val = np.concatenate((ft_val, val_pos), axis=1)
+    ft_train = np.concatenate((ft_train, train_pos, train_dep), axis=1)
+    ft_val = np.concatenate((ft_val, val_pos, val_dep), axis=1)
 
     print(ft_train.shape, ft_val.shape)
 
@@ -190,18 +237,18 @@ for emb_type in emb_list:
     print("C: %.3f, Gamma: %.3f, kernel: %s"%(classifier.C, classifier.gamma, classifier.kernel))
 
     predicted_distance = classifier.decision_function(ft_val)
-    results_fpath = my_loc+'/results/bert_word_pos_%s_%s_svm_norm%d.tsv'%(fname, emb_type, args.normalize)
+    results_fpath = my_loc+'/results/bert_word_posdep_%s_%s_svm_norm%d.tsv'%(fname, emb_type, args.normalize)
     with open(results_fpath, "w") as results_file:
         for i, line in valDF.iterrows():
             dist = predicted_distance[i][0]
             results_file.write("{}\t{}\t{}\t{}\n".format('covid-19', line['tweet_id'],
-                dist, 'bert_wd_pos'))
+                dist, 'bert_wd_posdep'))
 
     _, _, avg_precision, _, _ = evaluate('data/dev.tsv',results_fpath)
     print("%s, %s SVM AVGP: %.4f\n"%(fname, emb_type, round(avg_precision,4)))
 
-    pickle.dump({'best_pca': best_pca_nk}, open(my_loc+'/models/'+fname+'_'+emb_type+'_pos_norm%s.pkl'%(args.normalize), 'wb'))
-    classifier.save_to_file(my_loc+'/models/'+fname+'_'+emb_type+'_pos_norm%s.dt'%(args.normalize))
+    pickle.dump({'best_pca': best_pca_nk}, open(my_loc+'/models/'+fname+'_'+emb_type+'_posdep_norm%s.pkl'%(args.normalize), 'wb'))
+    classifier.save_to_file(my_loc+'/models/'+fname+'_'+emb_type+'_posdep_norm%s.dt'%(args.normalize))
 
     all_res.append([emb_type,round(accuracy,3), round(avg_precision,4),
                     best_pca_nk, ft_train.shape[1], ft_val.shape[1]])
@@ -209,7 +256,7 @@ for emb_type in emb_list:
     print("Completed in: {} minutes\n".format((time.time()-since)/60.0))
 
 
-with open(my_loc+'/file_results/bert_svm_word_pos_%s_norm%d.txt'%(fname, args.normalize), 'w') as f:
+with open(my_loc+'/file_results/bert_svm_word_posdep_%s_norm%d.txt'%(fname, args.normalize), 'w') as f:
     for res in all_res:
         f.write("%s\t%.3f\t%.4f\t%.2f\t%d\t%d\n"%(res[0], res[1], res[2], res[3], res[4], res[5]))
 

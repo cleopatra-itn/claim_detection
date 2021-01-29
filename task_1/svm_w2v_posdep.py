@@ -220,17 +220,17 @@ else:
 
 
 if norm_type == 1:
-    pos_type = 'pos_wiki'
-    w2v_type = 'wiki_clean'
+    pos_type = 'pos_twit'
+    w2v_type = 'twit_clean'
 elif norm_type == 2:
-    pos_type = 'pos_wiki_nostop'
-    w2v_type = 'wiki_clean_nostop'
+    pos_type = 'pos_twit_nostop'
+    w2v_type = 'twit_clean_nostop'
 elif norm_type == 3:
-    pos_type = 'pos_wiki'
-    w2v_type = 'wiki_clean_nostop'
+    pos_type = 'pos_twit'
+    w2v_type = 'twit_clean_nostop'
 else:
-    pos_type = 'pos_wiki_nostop'
-    w2v_type = 'wiki_clean'
+    pos_type = 'pos_twit_nostop'
+    w2v_type = 'twit_clean'
 
 train_x, train_y, trainDF = get_tweet_data(train_data, w2v_type)
 val_x, val_y, valDF = get_tweet_data(val_data, w2v_type)
@@ -249,10 +249,6 @@ val_ft_all = np.concatenate((val_pos, val_dep), axis=1)
 
 all_res = []
 
-
-# wordvec_list = ['spacy','glove-twitter-25', 'glove-twitter-50', 'glove-twitter-100', 'glove-twitter-200',
-#                 'glove-wiki-gigaword-50', 'glove-wiki-gigaword-100', 'glove-wiki-gigaword-200',
-#                 'glove-wiki-gigaword-300', 'fasttext-wiki-news-subwords-300', 'word2vec-google-news-300']
 
 wordvec_list = ['glove-twitter-25', 'glove-twitter-50', 'glove-twitter-100', 'glove-twitter-200']
 

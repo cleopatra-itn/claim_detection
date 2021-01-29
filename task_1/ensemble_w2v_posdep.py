@@ -148,13 +148,11 @@ val_data = json.load(open(my_loc+'/proc_data/val_data.json', 'r', encoding='utf-
 
 nlp = spacy.load('en_core_web_lg')
 
-pos_type = 'pos_wiki_nostop'
-w2v_type = 'wiki_clean'
+pos_type = 'pos_twit_nostop'
+w2v_type = 'twit_clean'
 
 pos_tags = {'NOUN':0, 'VERB':1, 'PROPN':2, 'ADJ':3, 'ADV':4, 'NUM':5,
             'ADP':6, 'PRON':7}
-# pos_tags = {'NOUN':0, 'VERB':1, 'PROPN':2, 'ADJ':3, 'ADV':4, 'NUM':5,
-#             'ADP':6, 'PRON':7, 'DET':8, 'INTJ':9, 'AUX':10, 'PART':11}
 
 train_x, train_y, trainDF = get_tweet_data(train_data, w2v_type)
 val_x, val_y, valDF = get_tweet_data(val_data, w2v_type)

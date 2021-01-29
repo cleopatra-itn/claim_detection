@@ -18,8 +18,8 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else "cpu")
 
 def get_text_processor(word_stats='twitter'):
     return TextPreProcessor(
-            # terms that will be normalized , 'number','money', 'time','date' removed from below list
-            normalize=['url', 'email', 'percent', 'phone', 'user'],
+            # terms that will be normalized , 'number','money', 'time','date', 'percent' removed from below list
+            normalize=['url', 'email', 'phone', 'user'],
             # terms that will be annotated
             annotate={"hashtag", "allcaps", "elongated", "repeated",
                       'emphasis', 'censored'},
@@ -45,7 +45,6 @@ def get_text_processor(word_stats='twitter'):
             # with other expressions. You can pass more than one dictionaries.
             dicts=[emoticons]
         )
-
 
 
 
