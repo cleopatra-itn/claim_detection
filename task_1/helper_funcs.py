@@ -1,3 +1,5 @@
+## Good Explanation here: https://mccormickml.com/2019/05/14/BERT-word-embeddings-tutorial/
+
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
@@ -70,7 +72,7 @@ def get_word_sent_embedding(tweet, model, tokenizer):
     # Map the token strings to their vocabulary indeces.
     indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_text)
 
-    # Mark each of the 22 tokens as belonging to sentence "1".
+    # Mark each token as belonging to sentence "1".
     segments_ids = [1] * len(tokenized_text)
 
     # Convert inputs to PyTorch tensors
@@ -82,66 +84,60 @@ def get_word_sent_embedding(tweet, model, tokenizer):
         _, _, encoded_layers = model(tokens_tensor, segments_tensors)
 
 
-    # Concatenate the tensors for all layers. We use `stack` here to
-    # create a new dimension in the tensor.
+    # Concatenate the tensors for all layers.
+    # Output is [1 x 12 x |W| x 768], |W| -> Number of words
     token_embeddings = torch.stack(encoded_layers, dim=0)
 
     # Remove dimension 1, the "batches".
     token_embeddings = torch.squeeze(token_embeddings, dim=1)
 
     # Swap dimensions 0 and 1.
+    # Output is [|W| x 12 x 768]
     token_embeddings = token_embeddings.permute(1,0,2)
 
-    # Stores the token vectors, with shape [22 x 3,072]
+    # Stores the concatenated (last 4 layers) token vectors
     token_vecs_cat = []
 
-    # `token_embeddings` is a [22 x 12 x 768] tensor.
-    # For each token in the sentence...
+    # Loop over tokens
     for token in token_embeddings:
-    
-        # `token` is a [12 x 768] tensor
-
         # Concatenate the vectors (that is, append them together) from the last 
         # four layers.
-        # Each layer vector is 768 values, so `cat_vec` is length 3,072.
+        # Concatenated length becomes 3072 (768*4)
         cat_vec = torch.cat((token[-1], token[-2], token[-3], token[-4]), dim=0)
-        
-        # Use `cat_vec` to represent `token`.
+   
         token_vecs_cat.append(cat_vec.cpu().numpy())
 
+    ## Average over words, Input [|w| x 3072] -> Output [3072]
     sent_word_catavg = np.mean(token_vecs_cat, axis=0)
     sent_word_catavg_wostop = avg_wordembs_wostop(tokenized_text,token_vecs_cat, len(token_vecs_cat[0]))
 
-    # Stores the token vectors, with shape [22 x 768]
+    # Stores the sum (last 4 layers) of token vectors
     token_vecs_sum = []
 
-    # `token_embeddings` is a [22 x 12 x 768] tensor.
-
-    # For each token in the sentence...
+    # Loop over tokens
     for token in token_embeddings:
-
-        # `token` is a [12 x 768] tensor
-
         # Sum the vectors from the last four layers.
         sum_vec = torch.sum(token[-4:], dim=0)
         
-        # Use `sum_vec` to represent `token`.
         token_vecs_sum.append(sum_vec.cpu().numpy())
 
+    ## Average over words, Input [|w| x 768] -> Output [768]
     sent_word_sumavg = np.mean(token_vecs_sum, axis=0)
     sent_word_sumavg_wostop = avg_wordembs_wostop(tokenized_text,token_vecs_sum, len(token_vecs_sum[0]))
 
-    # `token_vecs` is a tensor with shape [22 x 768]
+    # Second last layer tokens
     token_vecs = encoded_layers[-2][0]
 
-    # Calculate the average of all 22 token vectors.
+    # Average of second last layer
+    # Input [|w| x 768] -> Output [768]
     sent_emb_2_last = torch.mean(token_vecs, dim=0).cpu().numpy()
     sent_emb_2_last_wostop = avg_wordembs_wostop(tokenized_text,token_vecs.cpu().numpy(), len(token_vecs[0]))
-
-    # `token_vecs` is a tensor with shape [22 x 768]
+    
+    # Last layer tokens
     token_vecs = encoded_layers[-1][0]
 
-    # Calculate the average of all 22 token vectors.
+    # Average of last layer
+    # Input [|w| x 768] -> Output [768]
     sent_emb_last = torch.mean(token_vecs, dim=0).cpu().numpy()
     sent_emb_last_wostop = avg_wordembs_wostop(tokenized_text,token_vecs.cpu().numpy(), len(token_vecs[0]))
 
